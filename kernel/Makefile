@@ -16,10 +16,6 @@ ifdef DEBUG
 	CFLAGS += -DDEBUG -DMAP_DEBUG -g
 endif
 
-ifdef ANDROID
-	CFLAGS += -DANDROID
-endif
-
 INCLUDE := -I. -Iinclude -Ipatch/include -Ilinux -Ilinux/include -Ilinux/arch/arm64/include -Ilinux/tools/arch/arm64/include
 
 BASE_SRCS += base/setup.c 
@@ -41,10 +37,6 @@ BASE_SRCS += $(wildcard patch/*.c)
 BASE_SRCS += $(wildcard patch/common/*.c)
 BASE_SRCS += $(wildcard patch/module/*.c)
 BASE_SRCS += $(wildcard patch/ksyms/*.c)
-
-ifdef ANDROID
-	BASE_SRCS += $(wildcard patch/android/*.c)
-endif
 
 SRCS += $(BASE_SRCS)
 SRCS += $(LINUX_SRCS)

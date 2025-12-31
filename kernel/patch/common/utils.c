@@ -132,13 +132,11 @@ struct pt_regs *_task_pt_reg(struct task_struct *task)
     if (pt_regs_offset > 0) {
         addr -= pt_regs_offset;
     } else {
-#ifndef ANDROID
         if (kver < VERSION(4, 4, 19)) {
             addr -= sizeof(struct pt_regs_lt4419); // 0x120
         } else if (kver < VERSION(4, 14, 0)) {
             addr -= sizeof(struct pt_regs_lt4140); // 0x130
         } else
-#endif
             if (kver < VERSION(5, 10, 0)) {
             addr -= sizeof(struct pt_regs_lt5100); // 0x140
         } else {

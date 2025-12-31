@@ -11,9 +11,6 @@ setup_header_t header __section(.setup.header) = { .magic = KP_MAGIC,
                                                    .kp_version.minor = MINOR,
                                                    .kp_version.patch = PATCH,
                                                    .config_flags = 0
-#ifdef ANDROID
-                                                                   | CONFIG_ANDROID
-#endif
 #ifdef DEBUG
                                                                    | CONFIG_DEBUG
 #endif

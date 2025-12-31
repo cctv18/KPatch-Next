@@ -29,7 +29,7 @@
 #include <pidmem.h>
 #include <predata.h>
 #include <linux/random.h>
-#include <sucompat.h>
+#include <kpextension.h>
 #include <accctl.h>
 #include <kstorage.h>
 
@@ -128,26 +128,6 @@ static long call_kpm_info(const char *__user uname, char *__user out_info, int o
     return sz;
 }
 
-static long call_su(struct su_profile *__user uprofile)
-{
-    struct su_profile *profile = memdup_user(uprofile, sizeof(struct su_profile));
-    if (!profile || IS_ERR(profile)) return PTR_ERR(profile);
-    profile->scontext[sizeof(profile->scontext) - 1] = '\0';
-    int rc = commit_su(profile->to_uid, profile->scontext);
-    kvfree(profile);
-    return rc;
-}
-
-static long call_su_task(pid_t pid, struct su_profile *__user uprofile)
-{
-    struct su_profile *profile = memdup_user(uprofile, sizeof(struct su_profile));
-    if (!profile || IS_ERR(profile)) return PTR_ERR(profile);
-    profile->scontext[sizeof(profile->scontext) - 1] = '\0';
-    int rc = task_su(pid, profile->to_uid, profile->scontext);
-    kvfree(profile);
-    return rc;
-}
-
 static long call_skey_get(char *__user out_key, int out_len)
 {
     const char *key = get_superkey();
@@ -170,74 +150,6 @@ static long call_skey_root_enable(int enable)
 {
     enable_auth_root_key(enable);
     return 0;
-}
-
-static long call_grant_uid(struct su_profile *__user uprofile)
-{
-    struct su_profile *profile = memdup_user(uprofile, sizeof(struct su_profile));
-    if (!profile || IS_ERR(profile)) return PTR_ERR(profile);
-    int rc = su_add_allow_uid(profile->uid, profile->to_uid, profile->scontext);
-    kvfree(profile);
-    return rc;
-}
-
-static long call_revoke_uid(uid_t uid)
-{
-    return su_remove_allow_uid(uid);
-}
-
-static long call_su_allow_uid_nums()
-{
-    return su_allow_uid_nums();
-}
-
-#ifdef ANDROID
-extern int android_is_safe_mode;
-static long call_su_get_safemode()
-{
-    int result = android_is_safe_mode;
-    logkfd("[call_su_get_safemode] %d\n", result);
-    return result;
-}
-#endif
-
-static long call_su_list_allow_uid(uid_t *__user uids, int num)
-{
-    return su_allow_uids(1, uids, num);
-}
-
-static long call_su_allow_uid_profile(uid_t uid, struct su_profile *__user uprofile)
-{
-    return su_allow_uid_profile(1, uid, uprofile);
-}
-
-static long call_reset_su_path(const char *__user upath)
-{
-    return su_reset_path(strndup_user(upath, SU_PATH_MAX_LEN));
-}
-
-static long call_su_get_path(char *__user ubuf, int buf_len)
-{
-    const char *path = su_get_path();
-    int len = strlen(path);
-    if (buf_len <= len) return -ENOBUFS;
-    return compat_copy_to_user(ubuf, path, len + 1);
-}
-
-static long call_su_get_allow_sctx(char *__user usctx, int ulen)
-{
-    int len = strlen(all_allow_sctx);
-    if (ulen <= len) return -ENOBUFS;
-    return compat_copy_to_user(usctx, all_allow_sctx, len + 1);
-}
-
-static long call_su_set_allow_sctx(char *__user usctx)
-{
-    char buf[SUPERCALL_SCONTEXT_LEN];
-    buf[0] = '\0';
-    int len = compat_strncpy_from_user(buf, usctx, sizeof(buf));
-    if (len >= SUPERCALL_SCONTEXT_LEN && buf[SUPERCALL_SCONTEXT_LEN - 1]) return -E2BIG;
-    return set_all_allow_sctx(buf);
 }
 
 static long call_kstorage_read(int gid, long did, void *out_data, int offset, int dlen)
@@ -277,29 +189,6 @@ static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3
     }
 
     switch (cmd) {
-    case SUPERCALL_SU:
-        return call_su((struct su_profile * __user) arg1);
-    case SUPERCALL_SU_TASK:
-        return call_su_task((pid_t)arg1, (struct su_profile * __user) arg2);
-
-    case SUPERCALL_SU_GRANT_UID:
-        return call_grant_uid((struct su_profile * __user) arg1);
-    case SUPERCALL_SU_REVOKE_UID:
-        return call_revoke_uid((uid_t)arg1);
-    case SUPERCALL_SU_NUMS:
-        return call_su_allow_uid_nums();
-    case SUPERCALL_SU_LIST:
-        return call_su_list_allow_uid((uid_t *)arg1, (int)arg2);
-    case SUPERCALL_SU_PROFILE:
-        return call_su_allow_uid_profile((uid_t)arg1, (struct su_profile * __user) arg2);
-    case SUPERCALL_SU_RESET_PATH:
-        return call_reset_su_path((const char *)arg1);
-    case SUPERCALL_SU_GET_PATH:
-        return call_su_get_path((char *__user)arg1, (int)arg2);
-    case SUPERCALL_SU_GET_ALLOW_SCTX:
-        return call_su_get_allow_sctx((char *__user)arg1, (int)arg2);
-    case SUPERCALL_SU_SET_ALLOW_SCTX:
-        return call_su_set_allow_sctx((char *__user)arg1);
 
     case SUPERCALL_KSTORAGE_READ:
         return call_kstorage_read((int)arg1, (long)arg2, (void *)arg3, (int)((long)arg4 >> 32), (long)arg4 << 32 >> 32);
@@ -311,10 +200,6 @@ static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3
     case SUPERCALL_KSTORAGE_REMOVE:
         return call_kstorage_remove((int)arg1, (long)arg2);
 
-#ifdef ANDROID
-    case SUPERCALL_SU_GET_SAFEMODE:
-        return call_su_get_safemode();
-#endif
     default:
         break;
     }
