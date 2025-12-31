@@ -74,7 +74,6 @@ struct su_profile
     char scontext[SUPERCALL_SCONTEXT_LEN];
 };
 
-
 #define SU_PATH_MAX_LEN 128
 
 #define SUPERCMD "/system/bin/truncate"

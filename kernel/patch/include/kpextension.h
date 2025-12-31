@@ -12,6 +12,7 @@
 
 extern const char sh_path[];
 
+int su_add_allow_uid(uid_t uid, uid_t to_uid, const char *scontext);
 int is_su_allow_uid(uid_t uid);
 
 int get_ap_mod_exclude(uid_t uid);
