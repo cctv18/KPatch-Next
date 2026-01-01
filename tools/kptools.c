@@ -46,11 +46,11 @@ void print_usage(char **argv)
         "  -f, --flag                       Dump ikconfig infomations of kernel image(-i).\n"
         "  -l, --list                       Print all patch informations of kernel image if (-i) specified.\n"
         "                                   Print extra item informations if (-M) specified.\n"
-        "                                   Print KernelPatch image informations if (-k) specified.\n"
+        "                                   Print KPatch-Next image informations if (-k) specified.\n"
 
         "Options:\n"
         "  -i, --image PATH                 Kernel image path.\n"
-        "  -k, --kpimg PATH                 KernelPatch image path.\n"
+        "  -k, --kpimg PATH                 KPatch-Next image path.\n"
         "  -s, --skey KEY                   Set the superkey and save it directly in the boot.img.\n"
         "  -S, --root-skey KEY              Set the root-superkey useing hash verification, and the superkey can be changed dynamically.\n"
         "  -o, --out PATH                   Patched image path.\n"

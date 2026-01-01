@@ -1,8 +1,8 @@
-# KernelPatch Module
+# KPatch-Next Module
 
-## 什么是 KernelPatch Module (KPM)
+## 什么是 KPatch-Next Module (KPM)
 
-  **KPM is an ELF file that can be loaded and run within the kernel space by KernelPatch.**  
+  **KPM is an ELF file that can be loaded and run within the kernel space by KPatch-Next.**  
 
 ## How to write a KPM
 

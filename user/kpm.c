@@ -71,12 +71,12 @@ static void usage(int status)
     else {
         printf("Usage: %s <COMMAND> [ARG]...\n\n", program_name);
         fprintf(stdout, ""
-                        "KernelPatch Module command set.\n"
+                        "KPatch-Next Module command set.\n"
                         "\n"
                         "help                           Print this help message. \n"
-                        "load <KPM_PATH> [KPM_ARGS]     Load KernelPatch Module with KPM_PATH and KPM_ARGS.\n"
-                        "ctl0 <KPM_NAME> <CTL_ARGS>     Control KernelPatch Module named KPM_PATH with CTL_ARGS.\n"
-                        "unload <KPM_NAME>              Unload KernelPatch Module named KPM_NAME.\n"
+                        "load <KPM_PATH> [KPM_ARGS]     Load KPatch-Next Module with KPM_PATH and KPM_ARGS.\n"
+                        "ctl0 <KPM_NAME> <CTL_ARGS>     Control KPatch-Next Module named KPM_PATH with CTL_ARGS.\n"
+                        "unload <KPM_NAME>              Unload KPatch-Next Module named KPM_NAME.\n"
                         "num                            Get the number of modules that have been loaded.\n"
                         "list                           List names of all loaded modules.\n"
                         "info <KPM_NAME>                Get detailed information about module named KPM_NAME.\n"

@@ -1,8 +1,8 @@
 # Guide
 
-## How KernelPatch Works
+## How KPatch-Next Works
 
-KernelPatch consists of three components: kptools, kpimg, and kpatch.
+KPatch-Next consists of three components: kptools, kpimg, and kpatch.
 
 ### [kptools](/tools/)
 
@@ -25,4 +25,4 @@ kptools serves the following purposes:
 
 ### [kpuser](/user/)
 
-kpuser is the user space header file and library for KernelPatch. You can directly embed kpuser into your program.
+kpuser is the user space header file and library for KPatch-Next. You can directly embed kpuser into your program.

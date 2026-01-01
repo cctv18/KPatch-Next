@@ -1,4 +1,4 @@
-PROJECT_NAME = "KernelPatch Document"
+PROJECT_NAME = "KPatch-Next Document"
 OUTPUT_DIRECTORY = ./doc/api
 
 INPUT = \

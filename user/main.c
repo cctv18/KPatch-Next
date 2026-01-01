@@ -26,7 +26,7 @@ static void usage(int status)
     if (status != EXIT_SUCCESS) {
         fprintf(stderr, "Try `%s --help' for more information.\n", program_name);
     } else {
-        fprintf(stdout, "\nKernelPatch userspace cli.\n");
+        fprintf(stdout, "\nKPatch-Next userspace cli.\n");
         fprintf(stdout, KERNEL_PATCH_BANNER);
         fprintf(stdout,
                 " \n"
@@ -39,11 +39,11 @@ static void usage(int status)
         fprintf(stdout,
                 "\n"
                 "Commands:\n"
-                "hello          If KernelPatch installed, '%s' will echoed.\n"
-                "kpver          Print KernelPatch version.\n"
+                "hello          If KPatch-Next installed, '%s' will echoed.\n"
+                "kpver          Print KPatch-Next version.\n"
                 "kver           Print Kernel version.\n"
                 "key            Manager the superkey.\n"
-                "kpm            KernelPatch Module manager.\n"
+                "kpm            KPatch-Next Module manager.\n"
                 "exclude_set    Manage the exclude list.\n"
                 "exclude_get    Get exclude list status.\n"
                 "\n",

@@ -37,7 +37,7 @@ make
 ## Building kpatch
 
 kpatch runs in the user space of the target system, so you can build it as usual.  
-If you are using it for Android, you can use AndroidKernelPatch.
+If you are using it for Android, you can use KPatch-Next.
 
 - Using Makefile
 
@@ -70,7 +70,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
 cmake --build .
 ```
 
-## Build KernelPatch Module
+## Build KPatch-Next Module
 
 example:
 

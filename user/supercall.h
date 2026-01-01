@@ -16,7 +16,7 @@
 #include "uapi/scdefs.h"
 #include "../version"
 
-// TODO: delete this file and use supercall_ge0a04.h instead when no one has kernelpatch <= 0.10.4,
+// TODO: delete this file and use supercall_ge0a04.h instead when no one has KPatch-Next <= 0.10.4,
 
 // be 0a04
 static inline long hash_key_cmd(const char *key, long cmd)

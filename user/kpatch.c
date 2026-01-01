@@ -65,7 +65,7 @@ static void usage(int status)
     else {
         printf("Usage: %s <COMMAND> [ARG]...\n\n", program_name);
         fprintf(stdout, ""
-                        "KernelPatch SuperKey manager.\n"
+                        "KPatch-Next SuperKey manager.\n"
                         "\n"
                         "help                           Print this help message. \n"
                         "get                            Print current superkey.\n"
