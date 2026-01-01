@@ -3,8 +3,8 @@
  * Copyright (C) 2024 bmax121. All Rights Reserved.
  */
 
-#ifndef _KP_SUCOMPAT_H_
-#define _KP_SUCOMPAT_H_
+#ifndef _KP_KPEXTENSION_H_
+#define _KP_KPEXTENSION_H_
 
 #include <ktypes.h>
 #include <uapi/scdefs.h>
