@@ -16,7 +16,7 @@
 #include "uapi/scdefs.h"
 #include "kpatch.h"
 #include "kpm.h"
-#include "kpexclude.h"
+#include "kpextension.h"
 
 char program_name[128] = { '\0' };
 const char *key = NULL;
@@ -96,7 +96,6 @@ int main(int argc, char **argv)
 
         { "bootlog", 'l' },
         { "panic", '.' },
-        { "test", 't' },
 
         { "--help", 'h' },
         { "-h", 'h' },

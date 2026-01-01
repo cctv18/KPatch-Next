@@ -37,11 +37,6 @@
 
 #include <linux/umh.h>
 
-static long call_test(long arg1, long arg2, long arg3)
-{
-    return 0;
-}
-
 static long call_bootlog()
 {
     print_bootlog();
@@ -209,8 +204,6 @@ static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3
         return call_bootlog();
     case SUPERCALL_PANIC:
         return call_panic();
-    case SUPERCALL_TEST:
-        return call_test(arg1, arg2, arg3);
     default:
         break;
     }
@@ -270,9 +263,6 @@ static void before(hook_fargs6_t *args, void *udata)
 
     if (!auth_superkey(key)) {
         is_key_auth = 1;
-    } else if (!strcmp("su", key)) {
-        uid_t uid = current_uid();
-        if (!is_su_allow_uid(uid)) return;
     } else {
         return;
     }

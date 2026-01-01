@@ -1,5 +1,5 @@
-#ifndef _KPU_KPEXCLUDE_H
-#define _KPU_KPEXCLUDE_H
+#ifndef _KPU_KPEXTENSION_H
+#define _KPU_KPEXTENSION_H
 
 
 #include <unistd.h>

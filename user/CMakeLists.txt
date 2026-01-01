@@ -20,7 +20,7 @@ endif()
 set(SRCS 
     kpatch.c
     kpm.c
-    kpexclude.c
+    kpextension.c
 )
 
 add_library(kp STATIC ${SRCS})

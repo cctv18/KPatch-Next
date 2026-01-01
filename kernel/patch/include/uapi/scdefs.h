@@ -62,7 +62,6 @@ struct kernel_storage
 
 #define SUPERCALL_BOOTLOG 0x10fd
 #define SUPERCALL_PANIC 0x10fe
-#define SUPERCALL_TEST 0x10ff
 
 #define SUPERCALL_KEY_MAX_LEN 0x40
 #define SUPERCALL_SCONTEXT_LEN 0x60
@@ -73,23 +72,6 @@ struct su_profile
     uid_t to_uid;
     char scontext[SUPERCALL_SCONTEXT_LEN];
 };
-
-#define SU_PATH_MAX_LEN 128
-
-#define SUPERCMD "/system/bin/truncate"
-
-#define SAFE_MODE_FLAG_FILE "/dev/.safemode"
-
-#define SUPERCALL_SU_GRANT_UID 0x1100
-#define SUPERCALL_SU_REVOKE_UID 0x1101
-#define SUPERCALL_SU_NUMS 0x1102
-#define SUPERCALL_SU_LIST 0x1103
-#define SUPERCALL_SU_PROFILE 0x1104
-#define SUPERCALL_SU_GET_ALLOW_SCTX 0x1105
-#define SUPERCALL_SU_SET_ALLOW_SCTX 0x1106
-#define SUPERCALL_SU_GET_PATH 0x1110
-#define SUPERCALL_SU_RESET_PATH 0x1111
-#define SUPERCALL_SU_GET_SAFEMODE 0x1112
 
 #define SUPERCALL_MAX 0x1200
 

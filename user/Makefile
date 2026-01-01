@@ -3,7 +3,7 @@ CFLAGS = -std=c11 -Wall -Wextra -Wno-unused -Wno-unused-parameter
 
 SRC += kpatch.c
 SRC += kpm.c
-SRC += kpexclude.c
+SRC += kpextension.c
 
 
 OBJS := $(SRCS:.c=.o)

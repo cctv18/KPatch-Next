@@ -96,21 +96,6 @@ static inline uint32_t sc_skey_root_enable(const char *key, bool enable)
     return (uint32_t)ret;
 }
 
-static inline long sc_su(const char *key, struct su_profile *profile)
-{
-    if (!key || !key[0]) return -EINVAL;
-    if (strlen(profile->scontext) >= SUPERCALL_SCONTEXT_LEN) return -EINVAL;
-    long ret = syscall(__NR_supercall, key, compact_cmd(key, SUPERCALL_SU), profile);
-    return ret;
-}
-
-static inline long sc_su_task(const char *key, pid_t tid, struct su_profile *profile)
-{
-    if (!key || !key[0]) return -EINVAL;
-    long ret = syscall(__NR_supercall, key, compact_cmd(key, SUPERCALL_SU_TASK), tid, profile);
-    return ret;
-}
-
 static inline long sc_kpm_load(const char *key, const char *path, const char *args, void *reserved)
 {
     if (!key || !key[0]) return -EINVAL;
@@ -171,12 +156,6 @@ static inline long sc_panic(const char *key)
     return ret;
 }
 
-static inline long __sc_test(const char *key, long a1, long a2, long a3)
-{
-    long ret = syscall(__NR_supercall, key, compact_cmd(key, SUPERCALL_TEST), a1, a2, a3);
-    return ret;
-}
-
 static inline long sc_kstorage_read(const char *key, int gid, long did, void *out_data, int offset, int dlen)
 {
     if (!key || !key[0]) return -EINVAL;
@@ -188,6 +167,13 @@ static inline long sc_kstorage_write(const char *key, int gid, long did, void *d
 {
     if (!key || !key[0]) return -EINVAL;
     long ret = syscall(__NR_supercall, key, ver_and_cmd(key, SUPERCALL_KSTORAGE_WRITE), gid, did, data, (((long)offset << 32) | dlen));
+    return ret;
+}
+
+static inline long sc_kstorage_list_ids(const char *key, int gid, long *ids, int ids_len)
+{
+    if (!key || !key[0]) return -EINVAL;
+    long ret = syscall(__NR_supercall, key, ver_and_cmd(key, SUPERCALL_KSTORAGE_LIST_IDS), gid, ids, ids_len);
     return ret;
 }
 
@@ -213,20 +199,6 @@ static inline int sc_get_ap_mod_exclude(const char *key, uid_t uid)
     int rc = sc_kstorage_read(key, KSTORAGE_EXCLUDE_LIST_GROUP, uid, &exclude, 0, sizeof(exclude));
     if (rc < 0) return 0;
     return exclude;
-}
-
-static inline long sc_su_grant_uid(const char *key, uid_t uid, struct su_profile *profile)
-{
-    if (!key || !key[0]) return -EINVAL;
-    long ret = syscall(__NR_supercall, key, compact_cmd(key, SUPERCALL_SU_GRANT_UID), uid, profile);
-    return ret;
-}
-
-static inline long sc_su_revoke_uid(const char *key, uid_t uid)
-{
-    if (!key || !key[0]) return -EINVAL;
-    long ret = syscall(__NR_supercall, key, compact_cmd(key, SUPERCALL_SU_REVOKE_UID), uid);
-    return ret;
 }
 
 #endif
