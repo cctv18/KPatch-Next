@@ -170,13 +170,6 @@ static inline long sc_kstorage_write(const char *key, int gid, long did, void *d
     return ret;
 }
 
-static inline long sc_kstorage_list_ids(const char *key, int gid, long *ids, int ids_len)
-{
-    if (!key || !key[0]) return -EINVAL;
-    long ret = syscall(__NR_supercall, key, ver_and_cmd(key, SUPERCALL_KSTORAGE_LIST_IDS), gid, ids, ids_len);
-    return ret;
-}
-
 static inline long sc_kstorage_remove(const char *key, int gid, long did)
 {
     if (!key || !key[0]) return -EINVAL;
@@ -186,6 +179,7 @@ static inline long sc_kstorage_remove(const char *key, int gid, long did)
 
 static inline long sc_set_ap_mod_exclude(const char *key, uid_t uid, int exclude)
 {
+    if (!key || !key[0]) return -EINVAL;
     if(exclude) {
         return sc_kstorage_write(key, KSTORAGE_EXCLUDE_LIST_GROUP, uid, &exclude, 0, sizeof(exclude));
     } else {
@@ -195,6 +189,7 @@ static inline long sc_set_ap_mod_exclude(const char *key, uid_t uid, int exclude
 
 static inline int sc_get_ap_mod_exclude(const char *key, uid_t uid)
 {
+    if (!key || !key[0]) return -EINVAL;
     int exclude = 0;
     int rc = sc_kstorage_read(key, KSTORAGE_EXCLUDE_LIST_GROUP, uid, &exclude, 0, sizeof(exclude));
     if (rc < 0) return 0;

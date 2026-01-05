@@ -42,9 +42,6 @@ static void get_usage(int status)
 
 long set_uid_exclude(uid_t uid, int exclude)
 {
-    if (!key || !key[0])
-        error(-EINVAL, 0, "superkey not set");
-
     if (exclude != 0 && exclude != 1)
         error(-EINVAL, 0, "exclude must be 0 or 1");
 
@@ -60,9 +57,6 @@ long set_uid_exclude(uid_t uid, int exclude)
 
 long get_uid_exclude(uid_t uid)
 {
-    if (!key || !key[0])
-        error(-EINVAL, 0, "superkey not set");
-
     long rc = sc_get_ap_mod_exclude(key, uid);
     if (rc < 0)
         return rc;
