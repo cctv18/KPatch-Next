@@ -29,23 +29,19 @@ jobs:
           
           # 使用 gh 命令行工具获取上游仓库最新的成功构建
           # --json 参数指定我们需要获取的字段
-          RUN_JSON=$(gh run list \
-            --repo "$UPSTREAM_REPO" \
-            --status success \
-            --limit 1 \
-            --json databaseId,number,url,createdAt,headSha,headCommit,displayTitle)
+          RUN_JSON=$(gh api "repos/$UPSTREAM_REPO/actions/runs?status=success&per_page=1" --jq '.workflow_runs[0]')
 
           # 解析字段
-          RUN_ID=$(echo "$RUN_JSON" | jq -r '.[0].databaseId')
-          RUN_NUMBER=$(echo "$RUN_JSON" | jq -r '.[0].number')
-          HTML_URL=$(echo "$RUN_JSON" | jq -r '.[0].url')
-          CREATED_AT=$(echo "$RUN_JSON" | jq -r '.[0].createdAt')
-          HEAD_SHA=$(echo "$RUN_JSON" | jq -r '.[0].headSha')
+          RUN_ID=$(echo "$RUN_JSON" | jq -r '.id')
+          RUN_NUMBER=$(echo "$RUN_JSON" | jq -r '.run_number')
+          HTML_URL=$(echo "$RUN_JSON" | jq -r '.html_url')
+          CREATED_AT=$(echo "$RUN_JSON" | jq -r '.created_at')
+          HEAD_SHA=$(echo "$RUN_JSON" | jq -r '.head_sha')
           SHORT_SHA=${HEAD_SHA:0:7}
           
           # 提取 commit message 和 author (注意处理可能为空的情况)
-          COMMIT_MSG=$(echo "$RUN_JSON" | jq -r '.[0].headCommit.message // "No commit message"')
-          AUTHOR_NAME=$(echo "$RUN_JSON" | jq -r '.[0].headCommit.author.name // "Unknown"')
+          COMMIT_MSG=$(echo "$RUN_JSON" | jq -r '.head_commit.message // "No commit message"')
+          AUTHOR_NAME=$(echo "$RUN_JSON" | jq -r '.head_commit.author.name // "Unknown"')
 
           if [ "$RUN_ID" == "null" ] || [ -z "$RUN_ID" ]; then
             echo "❌ Failed to fetch run info via gh CLI."
