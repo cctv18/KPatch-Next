@@ -6,10 +6,6 @@
 #ifndef _KP_KPEXTENSION_H_
 #define _KP_KPEXTENSION_H_
 
-#include <ktypes.h>
-#include <uapi/scdefs.h>
-#include <hook.h>
-
 extern const char sh_path[];
 
 int su_add_allow_uid(uid_t uid, uid_t to_uid, const char *scontext);
