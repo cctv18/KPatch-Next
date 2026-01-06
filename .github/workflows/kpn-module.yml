@@ -16,38 +16,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch Latest Action Info & Download
+      - name: Fetch Latest Info & Download
         id: process
         env:
+          # 目标上游仓库
           UPSTREAM_REPO: "KernelSU-Next/KPatch-Next-Module"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 使用 GH_TOKEN 环境变量，gh 命令会自动读取它进行身份验证
+          # 这能解决 API Rate Limit 问题，获得 5000次/小时 的额度
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 1. 获取最新成功的 Workflow Run 信息 (匿名请求，无需 Token 即可读取公共仓库信息)
-          echo "🔍 Fetching latest workflow run..."
-          RUN_DATA=$(curl -s "https://api.github.com/repos/$UPSTREAM_REPO/actions/runs?status=success&per_page=1")
+          echo "🔍 Fetching latest workflow run info using GitHub CLI..."
           
-          # 解析关键信息
-          RUN_ID=$(echo "$RUN_DATA" | jq -r '.workflow_runs[0].id')
-          RUN_NUMBER=$(echo "$RUN_DATA" | jq -r '.workflow_runs[0].run_number')
-          HTML_URL=$(echo "$RUN_DATA" | jq -r '.workflow_runs[0].html_url')
-          CREATED_AT=$(echo "$RUN_DATA" | jq -r '.workflow_runs[0].created_at')
-          
-          # 解析 Commit 相关信息
-          HEAD_SHA=$(echo "$RUN_DATA" | jq -r '.workflow_runs[0].head_sha')
-          SHORT_SHA=${HEAD_SHA:0:7}
-          COMMIT_MSG=$(echo "$RUN_DATA" | jq -r '.workflow_runs[0].head_commit.message')
-          AUTHOR_NAME=$(echo "$RUN_DATA" | jq -r '.workflow_runs[0].head_commit.author.name')
+          # 使用 gh 命令行工具获取上游仓库最新的成功构建
+          # --json 参数指定我们需要获取的字段
+          RUN_JSON=$(gh run list \
+            --repo "$UPSTREAM_REPO" \
+            --status success \
+            --limit 1 \
+            --json databaseId,number,url,createdAt,headSha,headCommit,displayTitle)
 
-          # 检查是否获取成功
-          if [ "$RUN_ID" == "null" ]; then
-            echo "❌ Failed to fetch run info."
+          # 解析字段
+          RUN_ID=$(echo "$RUN_JSON" | jq -r '.[0].databaseId')
+          RUN_NUMBER=$(echo "$RUN_JSON" | jq -r '.[0].number')
+          HTML_URL=$(echo "$RUN_JSON" | jq -r '.[0].url')
+          CREATED_AT=$(echo "$RUN_JSON" | jq -r '.[0].createdAt')
+          HEAD_SHA=$(echo "$RUN_JSON" | jq -r '.[0].headSha')
+          SHORT_SHA=${HEAD_SHA:0:7}
+          
+          # 提取 commit message 和 author (注意处理可能为空的情况)
+          COMMIT_MSG=$(echo "$RUN_JSON" | jq -r '.[0].headCommit.message // "No commit message"')
+          AUTHOR_NAME=$(echo "$RUN_JSON" | jq -r '.[0].headCommit.author.name // "Unknown"')
+
+          if [ "$RUN_ID" == "null" ] || [ -z "$RUN_ID" ]; then
+            echo "❌ Failed to fetch run info via gh CLI."
             exit 1
           fi
           
           echo "✅ Found Run ID: $RUN_ID (Build #$RUN_NUMBER)"
 
-          # 2. 检查 Release 是否已存在
-          # 如果当前仓库已经发布过这个 Run ID 的版本，则跳过，避免重复发布
+          # 检查 Release 是否已存在
           TAG_NAME="build-$RUN_NUMBER"
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             echo "⚠️ Release $TAG_NAME already exists. Skipping."
@@ -55,17 +62,15 @@ jobs:
             exit 0
           fi
 
-          # 3. 格式化发布说明 (Release Body)
-          # 转换时间格式 (尝试转换为直观的格式)
+          # 格式化时间 (UTC -> Human Readable)
           FORMATTED_DATE=$(date -d "$CREATED_AT" "+%b %d, %I:%M %p UTC")
           
-          # 构建多行文本 (EOF 块)
+          # 构建 Release Body
           BODY_TEXT="Build #$RUN_NUMBER: Commit $SHORT_SHA pushed by $AUTHOR_NAME
           $COMMIT_MSG
           $FORMATTED_DATE
           $HTML_URL"
           
-          # 将多行文本写入环境变量文件，处理换行符
           echo "release_body<<EOF" >> $GITHUB_OUTPUT
           echo "$BODY_TEXT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -73,23 +78,23 @@ jobs:
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "release_title=Build #$RUN_NUMBER" >> $GITHUB_OUTPUT
 
-          # 4. 获取 Artifact 名称并下载
-          echo "🔍 Fetching artifact info..."
-          ARTIFACT_LIST=$(curl -s "https://api.github.com/repos/$UPSTREAM_REPO/actions/runs/$RUN_ID/artifacts")
-          ARTIFACT_NAME=$(echo "$ARTIFACT_LIST" | jq -r '.artifacts[0].name')
+          # 获取 Artifact 名称
+          # 注意：gh run view 也可以列出 artifacts，但这里用 API 配合 token 比较直接
+          echo "🔍 Fetching artifact name..."
+          ARTIFACT_JSON=$(gh api "repos/$UPSTREAM_REPO/actions/runs/$RUN_ID/artifacts")
+          ARTIFACT_NAME=$(echo "$ARTIFACT_JSON" | jq -r '.artifacts[0].name')
           
           if [ "$ARTIFACT_NAME" == "null" ]; then
             echo "❌ No artifacts found."
             exit 1
           fi
+          echo "✅ Artifact Name: $ARTIFACT_NAME"
 
-          # 使用 nightly.link 免 Token 下载
           DOWNLOAD_URL="https://nightly.link/$UPSTREAM_REPO/actions/runs/$RUN_ID/$ARTIFACT_NAME.zip"
           
-          echo "⬇️ Downloading $ARTIFACT_NAME from $DOWNLOAD_URL..."
+          echo "⬇️ Downloading from $DOWNLOAD_URL..."
           curl -L -o kpn.zip "$DOWNLOAD_URL"
 
-          # 验证文件
           if [ ! -f "kpn.zip" ]; then
             echo "❌ Download failed."
             exit 1
@@ -97,17 +102,13 @@ jobs:
           echo "✅ Downloaded and renamed to kpn.zip"
 
       - name: Create Release
-        # 只有当前面的步骤没有被标记为 skip 时才执行
         if: steps.process.outputs.skip != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "🚀 Creating release..."
-          
           gh release create "${{ steps.process.outputs.tag_name }}" \
             "kpn.zip" \
             --title "${{ steps.process.outputs.release_title }}" \
             --notes "${{ steps.process.outputs.release_body }}" \
             --repo "$GITHUB_REPOSITORY"
-
-          echo "🎉 Release published: ${{ steps.process.outputs.tag_name }}"
