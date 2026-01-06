@@ -1,22 +1,6 @@
 name: Build DEV CI
 
 on:
-  push:
-    branches: ["dev"]
-    paths:
-      - ".github/workflows/build_dev.yml"
-      - "kernel/**"
-      - "user/**"
-      - "tools/**"
-      - "version"
-  pull_request:
-    branches: ["dev"]
-    paths:
-      - ".github/workflows/build_dev.yml"
-      - "kernel/**"
-      - "user/**"
-      - "tools/**"
-      - "version"
   workflow_call:
   workflow_dispatch:
 
