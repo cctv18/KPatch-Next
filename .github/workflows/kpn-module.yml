@@ -62,10 +62,11 @@ jobs:
           FORMATTED_DATE=$(date -d "$CREATED_AT" "+%b %d, %I:%M %p UTC")
           
           # 构建 Release Body
-          BODY_TEXT="Build #$RUN_NUMBER: Commit $SHORT_SHA pushed by $AUTHOR_NAME
-          $COMMIT_MSG
-          $FORMATTED_DATE
-          $HTML_URL"
+          BODY_TEXT="### Build #$RUN_NUMBER: Commit KernelSU-Next/KPatch-Next-Module@$SHORT_SHA pushed by @$AUTHOR_NAME
+          - Info: $COMMIT_MSG
+          - Date: $FORMATTED_DATE
+          - Action link :
+          - $HTML_URL"
           
           echo "release_body<<EOF" >> $GITHUB_OUTPUT
           echo "$BODY_TEXT" >> $GITHUB_OUTPUT
