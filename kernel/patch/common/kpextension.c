@@ -3,40 +3,11 @@
  * Copyright (C) 2023 bmax121. All Rights Reserved.
  */
 
-#include <linux/list.h>
-#include <ktypes.h>
-#include <compiler.h>
-#include <stdbool.h>
-#include <linux/syscall.h>
-#include <ksyms.h>
-#include <hook.h>
-#include <linux/fs.h>
-#include <linux/uaccess.h>
-#include <stdbool.h>
-#include <asm/current.h>
-#include <linux/cred.h>
-#include <linux/sched.h>
-#include <uapi/scdefs.h>
-#include <kputils.h>
-#include <linux/ptrace.h>
 #include <accctl.h>
 #include <linux/string.h>
-#include <linux/err.h>
 #include <uapi/asm-generic/errno.h>
-#include <taskob.h>
-#include <linux/kernel.h>
 #include <linux/rculist.h>
-#include <linux/slab.h>
-#include <linux/spinlock.h>
-#include <syscall.h>
-#include <predata.h>
-#include <predata.h>
-#include <kconfig.h>
-#include <linux/vmalloc.h>
-#include <kpextension.h>
 #include <symbol.h>
-#include <uapi/linux/limits.h>
-#include <predata.h>
 #include <kstorage.h>
 
 static int su_kstorage_gid = -1;
@@ -94,17 +65,6 @@ int get_ap_mod_exclude(uid_t uid)
     return exclude;
 }
 KP_EXPORT_SYMBOL(get_ap_mod_exclude);
-
-int list_ap_mod_exclude(uid_t *uids, int len)
-{
-    long ids[len];
-    int cnt = list_kstorage_ids(exclude_kstorage_gid, ids, len, false);
-    for (int i = 0; i < len; i++) {
-        uids[i] = (uid_t)ids[i];
-    }
-    return cnt;
-}
-KP_EXPORT_SYMBOL(list_ap_mod_exclude);
 
 int kpextension_init()
 {

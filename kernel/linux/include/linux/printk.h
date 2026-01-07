@@ -40,6 +40,7 @@ extern int kptr_restrict;
 #define pr_notice(fmt, ...) printk(KERN_NOTICE pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_info(fmt, ...) printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_cont(fmt, ...) printk(KERN_CONT fmt, ##__VA_ARGS__)
+#define pr_debug(fmt, ...) printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
 
 static inline void dump_stack_lvl(const char *log_lvl)
 {

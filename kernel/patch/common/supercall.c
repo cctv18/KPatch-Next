@@ -243,11 +243,16 @@ static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3
     return -ENOSYS;
 }
 
-static void before(hook_fargs6_t *args, void *udata)
+void before(hook_fargs6_t *args, void *udata)
 {   
-    // if (current_uid() != 0u) return; // only allow root
+    if (args->arg0 == 0)
+        args->skip_origin = 1;
 
-    if (likely(get_ap_mod_exclude(current_uid()))) return; // don't let excluded uid pass
+    if (current_uid() != 0u) // only allow root 
+        return;
+
+    // if (likely(get_ap_mod_exclude(current_uid()))) // don't let excluded uid pass
+    //     return;
 
     const char *__user ukey = (const char *__user)syscall_argn(args, 0);
     long ver_xx_cmd = (long)syscall_argn(args, 1);
