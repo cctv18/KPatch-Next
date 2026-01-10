@@ -6,15 +6,6 @@
 #ifndef _KP_UAPI_SCDEF_H_
 #define _KP_UAPI_SCDEF_H_
 
-static inline long hash_key(const char *key)
-{
-    long hash = 1000000007;
-    for (int i = 0; key[i]; i++) {
-        hash = hash * 31 + key[i];
-    }
-    return hash;
-}
-
 #define SUPERCALL_HELLO_ECHO "hello2026"
 
 // #define __NR_supercall __NR3264_truncate // 45
@@ -26,10 +17,6 @@ static inline long hash_key(const char *key)
 #define SUPERCALL_BUILD_TIME 0x1007
 #define SUPERCALL_KERNELPATCH_VER 0x1008
 #define SUPERCALL_KERNEL_VER 0x1009
-
-#define SUPERCALL_SKEY_GET 0x100a
-#define SUPERCALL_SKEY_SET 0x100b
-#define SUPERCALL_SKEY_ROOT_ENABLE 0x100c
 
 #define SUPERCALL_KPM_LOAD 0x1020
 #define SUPERCALL_KPM_UNLOAD 0x1021
@@ -65,7 +52,6 @@ struct kernel_storage
 #define SUPERCALL_MINIMAL_HOOKS_STATUS 0x1102
 #define SUPERCALL_TARGET_HOOKS_STATUS 0x1103
 
-#define SUPERCALL_KEY_MAX_LEN 0x40
 #define SUPERCALL_SCONTEXT_LEN 0x60
 
 struct su_profile
