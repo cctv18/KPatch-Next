@@ -53,6 +53,18 @@ static const int target_compat_syscalls[] = {
     96
 };
 
+static void minimal_before(hook_fargs6_t *args, void *udata)
+{
+    // just a palceholder to not use main before()
+    return;
+}
+
+static void target_before(hook_fargs6_t *args, void *udata)
+{
+    // just a palceholder to not use main before()
+    return;
+}
+
 static inline bool syscall_is_skipped(int nr, const int *list, size_t count)
 {
     for (size_t i = 0; i < count; i++) {
@@ -62,20 +74,20 @@ static inline bool syscall_is_skipped(int nr, const int *list, size_t count)
     return false;
 }
 
-static void hook_native_syscalls(const int *syscalls, size_t count)
+static void hook_native_syscalls(const int *syscalls, size_t count, void (*callback)(hook_fargs6_t *, void *))
 {
     logki("hook_native_syscalls start\n");
 
     if (syscalls) {
         for (size_t i = 0; i < count; i++) {
             int nr = syscalls[i];
-            hook_syscalln(nr, 0, before, 0, 0);
+            hook_syscalln(nr, 0, callback, 0, 0);
             logkfd("hooked native syscall %d\n", nr);
         }
     } else {
         for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
             if (!syscall_is_skipped(nr, native_skip_syscalls, ARRAY_SIZE(native_skip_syscalls))) {
-                hook_syscalln(nr, 0, before, 0, 0);
+                hook_syscalln(nr, 0, callback, 0, 0);
                 logkfd("hooked native syscall %d\n", nr);
             }
         }
@@ -84,20 +96,20 @@ static void hook_native_syscalls(const int *syscalls, size_t count)
     logki("hook_native_syscalls done\n");
 }
 
-static void unhook_native_syscalls(const int *syscalls, size_t count)
+static void unhook_native_syscalls(const int *syscalls, size_t count, void (*callback)(hook_fargs6_t *, void *))
 {
     logki("unhook_native_syscalls start\n");
 
     if (syscalls) {
         for (size_t i = 0; i < count; i++) {
             int nr = syscalls[i];
-            unhook_syscalln(nr, before, 0);
+            unhook_syscalln(nr, callback, 0);
             logkfd("unhooked native syscall %d\n", nr);
         }
     } else {
         for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
             if (!syscall_is_skipped(nr, native_skip_syscalls, ARRAY_SIZE(native_skip_syscalls))) {
-                unhook_syscalln(nr, before, 0);
+                unhook_syscalln(nr, callback, 0);
                 logkfd("unhooked native syscall %d\n", nr);
             }
         }
@@ -107,7 +119,7 @@ static void unhook_native_syscalls(const int *syscalls, size_t count)
 }
 
 /* ---------------- Compat ---------------- */
-static void hook_compat_syscalls(const int *syscalls, size_t count)
+static void hook_compat_syscalls(const int *syscalls, size_t count, void (*callback)(hook_fargs6_t *, void *))
 {
     if (!has_config_compat || !compat_sys_call_table)
         return;
@@ -117,13 +129,13 @@ static void hook_compat_syscalls(const int *syscalls, size_t count)
     if (syscalls) {
         for (size_t i = 0; i < count; i++) {
             int nr = syscalls[i];
-            hook_compat_syscalln(nr, 0, before, 0, 0);
+            hook_compat_syscalln(nr, 0, callback, 0, 0);
             logkfd("hooked compat syscall %d\n", nr);
         }
     } else {
         for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
             if (!syscall_is_skipped(nr, compat_skip_syscalls, ARRAY_SIZE(compat_skip_syscalls))) {
-                hook_compat_syscalln(nr, 0, before, 0, 0);
+                hook_compat_syscalln(nr, 0, callback, 0, 0);
                 logkfd("hooked compat syscall %d\n", nr);
             }
         }
@@ -132,7 +144,7 @@ static void hook_compat_syscalls(const int *syscalls, size_t count)
     logki("hook_compat_syscalls done\n");
 }
 
-static void unhook_compat_syscalls(const int *syscalls, size_t count)
+static void unhook_compat_syscalls(const int *syscalls, size_t count, void (*callback)(hook_fargs6_t *, void *))
 {
     if (!has_config_compat || !compat_sys_call_table)
         return;
@@ -142,13 +154,13 @@ static void unhook_compat_syscalls(const int *syscalls, size_t count)
     if (syscalls) {
         for (size_t i = 0; i < count; i++) {
             int nr = syscalls[i];
-            unhook_compat_syscalln(nr, before, 0);
+            unhook_compat_syscalln(nr, callback, 0);
             logkfd("unhooked compat syscall %d\n", nr);
         }
     } else {
         for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
             if (!syscall_is_skipped(nr, compat_skip_syscalls, ARRAY_SIZE(compat_skip_syscalls))) {
-                unhook_compat_syscalln(nr, before, 0);
+                unhook_compat_syscalln(nr, callback, 0);
                 logkfd("unhooked compat syscall %d\n", nr);
             }
         }
@@ -162,8 +174,8 @@ int minimal_hook_init(void)
 {
     logki("minimal_hook_init start\n");
 
-    hook_native_syscalls(NULL, 0);
-    hook_compat_syscalls(NULL, 0);
+    hook_native_syscalls(NULL, 0, minimal_before);
+    hook_compat_syscalls(NULL, 0, minimal_before);
 
     minimal_hooks_enabled = 1;
 
@@ -176,8 +188,8 @@ int minimal_hook_exit(void)
 {
     logki("minimal_hook_exit start\n");
 
-    unhook_native_syscalls(NULL, 0);
-    unhook_compat_syscalls(NULL, 0);
+    unhook_native_syscalls(NULL, 0, minimal_before);
+    unhook_compat_syscalls(NULL, 0, minimal_before);
 
     minimal_hooks_enabled = 0;
 
@@ -190,8 +202,8 @@ int target_hook_init(void)
 {
     logki("target_hook_init start\n");
 
-    hook_native_syscalls(target_native_syscalls, ARRAY_SIZE(target_native_syscalls));
-    hook_compat_syscalls(target_compat_syscalls, ARRAY_SIZE(target_compat_syscalls));
+    hook_native_syscalls(target_native_syscalls, ARRAY_SIZE(target_native_syscalls), target_before);
+    hook_compat_syscalls(target_compat_syscalls, ARRAY_SIZE(target_compat_syscalls), target_before);
 
     target_hooks_enabled = 1;
 
@@ -204,8 +216,8 @@ int target_hook_exit(void)
 {
     logki("target_hook_exit start\n");
 
-    unhook_native_syscalls(target_native_syscalls, ARRAY_SIZE(target_native_syscalls));
-    unhook_compat_syscalls(target_compat_syscalls, ARRAY_SIZE(target_compat_syscalls));
+    unhook_native_syscalls(target_native_syscalls, ARRAY_SIZE(target_native_syscalls), target_before);
+    unhook_compat_syscalls(target_compat_syscalls, ARRAY_SIZE(target_compat_syscalls), target_before);
 
     target_hooks_enabled = 0;
 

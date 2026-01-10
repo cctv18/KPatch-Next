@@ -30,7 +30,6 @@
 #include <predata.h>
 #include <linux/random.h>
 #include <kpextension.h>
-#include <accctl.h>
 #include <kstorage.h>
 #include <rehook.h>
 
@@ -159,7 +158,6 @@ static long supercall(long cmd, long arg1, long arg2, long arg3, long arg4)
     }
 
     switch (cmd) {
-
     case SUPERCALL_KSTORAGE_READ:
         return call_kstorage_read((int)arg1, (long)arg2, (void *)arg3, (int)((long)arg4 >> 32), (long)arg4 << 32 >> 32);
     case SUPERCALL_KSTORAGE_WRITE:
@@ -169,7 +167,6 @@ static long supercall(long cmd, long arg1, long arg2, long arg3, long arg4)
         return call_list_kstorage_ids((int)arg1, (long *)arg2, (int)arg3);
     case SUPERCALL_KSTORAGE_REMOVE:
         return call_kstorage_remove((int)arg1, (long)arg2);
-
     default:
         break;
     }
@@ -181,21 +178,6 @@ static long supercall(long cmd, long arg1, long arg2, long arg3, long arg4)
         return call_panic();
     default:
         break;
-    }
-
-    switch (cmd) {
-    case SUPERCALL_KPM_LOAD:
-        return call_kpm_load((const char *__user)arg1, (const char *__user)arg2, (void *__user)arg3);
-    case SUPERCALL_KPM_UNLOAD:
-        return call_kpm_unload((const char *__user)arg1, (void *__user)arg2);
-    case SUPERCALL_KPM_CONTROL:
-        return call_kpm_control((const char *__user)arg1, (const char *__user)arg2, (char *__user)arg3, (int)arg4);
-    case SUPERCALL_KPM_NUMS:
-        return call_kpm_nums();
-    case SUPERCALL_KPM_LIST:
-        return call_kpm_list((char *__user)arg1, (int)arg2);
-    case SUPERCALL_KPM_INFO:
-        return call_kpm_info((const char *__user)arg1, (char *__user)arg2, (int)arg3);
     }
 
     switch (cmd) {
@@ -219,7 +201,24 @@ static long supercall(long cmd, long arg1, long arg2, long arg3, long arg4)
         return minimal_hooks_status();
     case SUPERCALL_TARGET_HOOKS_STATUS:
         return target_hooks_status();
-        
+    }
+
+    switch (cmd) {
+    case SUPERCALL_KPM_LOAD:
+        return call_kpm_load((const char *__user)arg1, (const char *__user)arg2, (void *__user)arg3);
+    case SUPERCALL_KPM_UNLOAD:
+        return call_kpm_unload((const char *__user)arg1, (void *__user)arg2);
+    case SUPERCALL_KPM_CONTROL:
+        return call_kpm_control((const char *__user)arg1, (const char *__user)arg2, (char *__user)arg3, (int)arg4);
+    case SUPERCALL_KPM_NUMS:
+        return call_kpm_nums();
+    case SUPERCALL_KPM_LIST:
+        return call_kpm_list((char *__user)arg1, (int)arg2);
+    case SUPERCALL_KPM_INFO:
+        return call_kpm_info((const char *__user)arg1, (char *__user)arg2, (int)arg3);
+    }
+
+    switch (cmd) {
     default:
         break;
     }
@@ -227,17 +226,10 @@ static long supercall(long cmd, long arg1, long arg2, long arg3, long arg4)
     return -ENOSYS;
 }
 
-void before(hook_fargs6_t *args, void *udata)
-{   
-    if (args->arg0 == 0)
-        args->skip_origin = 1;
-
+void supercall_before(hook_fargs6_t *args, void *udata)
+{
     if (current_uid() != 0u) // only allow root 
         return;
-
-    // if (likely(get_ap_mod_exclude(current_uid()))) // don't let excluded uid pass
-    //     return;
-
     long ver_xx_cmd = (long)syscall_argn(args, 1);
 
     // todo: from 0.10.5
@@ -260,7 +252,7 @@ int supercall_install()
 {
     int rc = 0;
 
-    hook_err_t err = hook_syscalln(__NR_supercall, 6, before, 0, 0);
+    hook_err_t err = hook_syscalln(__NR_supercall, 6, supercall_before, 0, 0);
     if (err) {
         log_boot("install supercall hook error: %d\n", err);
         rc = err;
