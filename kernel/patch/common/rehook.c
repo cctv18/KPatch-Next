@@ -7,13 +7,16 @@
 #include <syscall.h>
 #include <uapi/scdefs.h>
 #include <symbol.h>
-#include <supercall.h>
 #include <linux/printk.h>
 #include <kputils.h>
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 #define MIN_SYSCALL_NR 0
 #define MAX_SYSCALL_NR 451
+
+extern void *sys_call_table;
+extern void *compat_sys_call_table;
+extern int has_config_compat;
 
 static int minimal_hooks_enabled = 0;
 static int target_hooks_enabled = 0;
@@ -58,16 +61,12 @@ static void minimal_before(hook_fargs0_t *args, void *udata)
 {
     if (current_uid() != 0u) // only allow root 
         return;
-        
-    return;
 }
 
 static void target_before(hook_fargs0_t *args, void *udata)
 {
     if (current_uid() != 0u) // only allow root 
         return;
-        
-    return;
 }
 
 static inline bool syscall_is_skipped(int nr, const int *list, size_t count)
@@ -79,6 +78,34 @@ static inline bool syscall_is_skipped(int nr, const int *list, size_t count)
     return false;
 }
 
+static inline bool syscall_is_valid(int nr)
+{
+    void **table;
+    
+    if (nr < MIN_SYSCALL_NR || nr > MAX_SYSCALL_NR)
+        return false;
+    
+    table = (void **)sys_call_table;
+    if (!table || table[nr] == NULL)
+        return false;
+    
+    return true;
+}
+
+static inline bool compat_syscall_is_valid(int nr)
+{
+    void **table;
+    
+    if (nr < MIN_SYSCALL_NR || nr > MAX_SYSCALL_NR)
+        return false;
+    
+    table = (void **)compat_sys_call_table;
+    if (!table || table[nr] == NULL)
+        return false;
+    
+    return true;
+}
+
 static void hook_native_syscalls(const int *syscalls, size_t count, void (*callback)(hook_fargs0_t *, void *))
 {
     logki("hook_native_syscalls start\n");
@@ -86,15 +113,28 @@ static void hook_native_syscalls(const int *syscalls, size_t count, void (*callb
     if (syscalls) {
         for (size_t i = 0; i < count; i++) {
             int nr = syscalls[i];
+            
+            // skip invalid/unimplemented syscalls
+            if (!syscall_is_valid(nr)) {
+                logkfd("skipping invalid native syscall %d\n", nr);
+                continue;
+            }
+            
             hook_syscalln(nr, 0, callback, 0, 0);
             logkfd("hooked native syscall %d\n", nr);
         }
     } else {
         for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
-            if (!syscall_is_skipped(nr, native_skip_syscalls, ARRAY_SIZE(native_skip_syscalls))) {
-                hook_syscalln(nr, 0, callback, 0, 0);
-                logkfd("hooked native syscall %d\n", nr);
-            }
+            // skip if in skip list
+            if (syscall_is_skipped(nr, native_skip_syscalls, ARRAY_SIZE(native_skip_syscalls)))
+                continue;
+            
+            // skip invalid/unimplemented syscalls
+            if (!syscall_is_valid(nr))
+                continue;
+            
+            hook_syscalln(nr, 0, callback, 0, 0);
+            logkfd("hooked native syscall %d\n", nr);
         }
     }
 
@@ -108,15 +148,25 @@ static void unhook_native_syscalls(const int *syscalls, size_t count, void (*cal
     if (syscalls) {
         for (size_t i = 0; i < count; i++) {
             int nr = syscalls[i];
+            
+            // skip invalid/unimplemented syscalls
+            if (!syscall_is_valid(nr))
+                continue;
+            
             unhook_syscalln(nr, callback, 0);
             logkfd("unhooked native syscall %d\n", nr);
         }
     } else {
         for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
-            if (!syscall_is_skipped(nr, native_skip_syscalls, ARRAY_SIZE(native_skip_syscalls))) {
-                unhook_syscalln(nr, callback, 0);
-                logkfd("unhooked native syscall %d\n", nr);
-            }
+            if (syscall_is_skipped(nr, native_skip_syscalls, ARRAY_SIZE(native_skip_syscalls)))
+                continue;
+            
+            // skip invalid/unimplemented syscalls
+            if (!syscall_is_valid(nr))
+                continue;
+            
+            unhook_syscalln(nr, callback, 0);
+            logkfd("unhooked native syscall %d\n", nr);
         }
     }
 
@@ -134,15 +184,27 @@ static void hook_compat_syscalls(const int *syscalls, size_t count, void (*callb
     if (syscalls) {
         for (size_t i = 0; i < count; i++) {
             int nr = syscalls[i];
+            
+            // skip invalid/unimplemented syscalls
+            if (!compat_syscall_is_valid(nr)) {
+                logkfd("skipping invalid compat syscall %d\n", nr);
+                continue;
+            }
+            
             hook_compat_syscalln(nr, 0, callback, 0, 0);
             logkfd("hooked compat syscall %d\n", nr);
         }
     } else {
         for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
-            if (!syscall_is_skipped(nr, compat_skip_syscalls, ARRAY_SIZE(compat_skip_syscalls))) {
-                hook_compat_syscalln(nr, 0, callback, 0, 0);
-                logkfd("hooked compat syscall %d\n", nr);
-            }
+            if (syscall_is_skipped(nr, compat_skip_syscalls, ARRAY_SIZE(compat_skip_syscalls)))
+                continue;
+            
+            // skip invalid/unimplemented syscalls
+            if (!compat_syscall_is_valid(nr))
+                continue;
+            
+            hook_compat_syscalln(nr, 0, callback, 0, 0);
+            logkfd("hooked compat syscall %d\n", nr);
         }
     }
 
@@ -159,15 +221,25 @@ static void unhook_compat_syscalls(const int *syscalls, size_t count, void (*cal
     if (syscalls) {
         for (size_t i = 0; i < count; i++) {
             int nr = syscalls[i];
+            
+            // skip invalid/unimplemented syscalls
+            if (!compat_syscall_is_valid(nr))
+                continue;
+            
             unhook_compat_syscalln(nr, callback, 0);
             logkfd("unhooked compat syscall %d\n", nr);
         }
     } else {
         for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
-            if (!syscall_is_skipped(nr, compat_skip_syscalls, ARRAY_SIZE(compat_skip_syscalls))) {
-                unhook_compat_syscalln(nr, callback, 0);
-                logkfd("unhooked compat syscall %d\n", nr);
-            }
+            if (syscall_is_skipped(nr, compat_skip_syscalls, ARRAY_SIZE(compat_skip_syscalls)))
+                continue;
+            
+            // skip invalid/unimplemented syscalls
+            if (!compat_syscall_is_valid(nr))
+                continue;
+            
+            unhook_compat_syscalln(nr, callback, 0);
+            logkfd("unhooked compat syscall %d\n", nr);
         }
     }
 
