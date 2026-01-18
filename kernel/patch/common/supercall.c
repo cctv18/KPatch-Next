@@ -30,10 +30,8 @@
 #include <predata.h>
 #include <linux/random.h>
 #include <kpextension.h>
-#include <accctl.h>
 #include <kstorage.h>
-
-#define MAX_KEY_LEN 128
+#include <rehook.h>
 
 #include <linux/umh.h>
 
@@ -123,30 +121,6 @@ static long call_kpm_info(const char *__user uname, char *__user out_info, int o
     return sz;
 }
 
-static long call_skey_get(char *__user out_key, int out_len)
-{
-    const char *key = get_superkey();
-    int klen = strlen(key);
-    if (klen >= out_len) return -ENOMEM;
-    int rc = compat_copy_to_user(out_key, key, klen + 1);
-    return rc;
-}
-
-static long call_skey_set(char *__user new_key)
-{
-    char buf[SUPER_KEY_LEN];
-    int len = compat_strncpy_from_user(buf, new_key, sizeof(buf));
-    if (len >= SUPER_KEY_LEN && buf[SUPER_KEY_LEN - 1]) return -E2BIG;
-    reset_superkey(new_key);
-    return 0;
-}
-
-static long call_skey_root_enable(int enable)
-{
-    enable_auth_root_key(enable);
-    return 0;
-}
-
 static long call_kstorage_read(int gid, long did, void *out_data, int offset, int dlen)
 {
     return read_kstorage(gid, did, out_data, offset, dlen, true);
@@ -167,7 +141,7 @@ static long call_kstorage_remove(int gid, long did)
     return remove_kstorage(gid, did);
 }
 
-static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3, long arg4)
+static long supercall(long cmd, long arg1, long arg2, long arg3, long arg4)
 {
     switch (cmd) {
     case SUPERCALL_HELLO:
@@ -184,7 +158,6 @@ static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3
     }
 
     switch (cmd) {
-
     case SUPERCALL_KSTORAGE_READ:
         return call_kstorage_read((int)arg1, (long)arg2, (void *)arg3, (int)((long)arg4 >> 32), (long)arg4 << 32 >> 32);
     case SUPERCALL_KSTORAGE_WRITE:
@@ -194,7 +167,6 @@ static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3
         return call_list_kstorage_ids((int)arg1, (long *)arg2, (int)arg3);
     case SUPERCALL_KSTORAGE_REMOVE:
         return call_kstorage_remove((int)arg1, (long)arg2);
-
     default:
         break;
     }
@@ -208,16 +180,17 @@ static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3
         break;
     }
 
-    if (!is_key_auth) return -EPERM;
-
     switch (cmd) {
-    case SUPERCALL_SKEY_GET:
-        return call_skey_get((char *__user)arg1, (int)arg2);
-    case SUPERCALL_SKEY_SET:
-        return call_skey_set((char *__user)arg1);
-    case SUPERCALL_SKEY_ROOT_ENABLE:
-        return call_skey_root_enable((int)arg1);
-        break;
+    case SUPERCALL_REHOOK_SYSCALL:
+        {
+            int enable = (int)arg1;
+            if (enable)
+                return rehook_init();
+            else
+                return rehook_exit();
+        }
+    case SUPERCALL_REHOOK_STATUS:
+        return rehook_status();
     }
 
     switch (cmd) {
@@ -243,18 +216,10 @@ static long supercall(int is_key_auth, long cmd, long arg1, long arg2, long arg3
     return -ENOSYS;
 }
 
-void before(hook_fargs6_t *args, void *udata)
-{   
-    if (args->arg0 == 0)
-        args->skip_origin = 1;
-
+void supercall_before(hook_fargs6_t *args, void *udata)
+{
     if (current_uid() != 0u) // only allow root 
         return;
-
-    // if (likely(get_ap_mod_exclude(current_uid()))) // don't let excluded uid pass
-    //     return;
-
-    const char *__user ukey = (const char *__user)syscall_argn(args, 0);
     long ver_xx_cmd = (long)syscall_argn(args, 1);
 
     // todo: from 0.10.5
@@ -264,32 +229,20 @@ void before(hook_fargs6_t *args, void *udata)
     long cmd = ver_xx_cmd & 0xFFFF;
     if (cmd < SUPERCALL_HELLO || cmd > SUPERCALL_MAX) return;
 
-    char key[MAX_KEY_LEN];
-    long len = compat_strncpy_from_user(key, ukey, MAX_KEY_LEN);
-    if (len <= 0) return;
-
-    int is_key_auth = 0;
-
-    if (!auth_superkey(key)) {
-        is_key_auth = 1;
-    } else {
-        return;
-    }
-
     long a1 = (long)syscall_argn(args, 2);
     long a2 = (long)syscall_argn(args, 3);
     long a3 = (long)syscall_argn(args, 4);
     long a4 = (long)syscall_argn(args, 5);
 
     args->skip_origin = 1;
-    args->ret = supercall(is_key_auth, cmd, a1, a2, a3, a4);
+    args->ret = supercall(cmd, a1, a2, a3, a4);
 }
 
 int supercall_install()
 {
     int rc = 0;
 
-    hook_err_t err = hook_syscalln(__NR_supercall, 6, before, 0, 0);
+    hook_err_t err = hook_syscalln(__NR_supercall, 6, supercall_before, 0, 0);
     if (err) {
         log_boot("install supercall hook error: %d\n", err);
         rc = err;

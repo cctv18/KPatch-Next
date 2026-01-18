@@ -13,6 +13,9 @@
 #include <uapi/asm-generic/unistd.h>
 
 extern int has_syscall_wrapper;
+
+extern uintptr_t *sys_call_table;
+
 extern struct
 {
     const char *name;

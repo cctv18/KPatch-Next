@@ -7,198 +7,92 @@
 #include <syscall.h>
 #include <uapi/scdefs.h>
 #include <symbol.h>
-#include <supercall.h>
 #include <linux/printk.h>
+#include <kputils.h>
+#include <hook.h>
+#include <stddef.h>
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-#define MIN_SYSCALL_NR 0
-#define MAX_SYSCALL_NR 451
+static int rehook_enabled = 0;
+\
+static int getpriority_nr = __NR_getpriority;
+static int getpriority_nr_arg = 2;
 
-static const int native_skip_syscalls[] = {
-    __NR_execve,
-    __NR_execveat,
-    __NR_getuid,
-    __NR_getegid,
-    __NR_getgid,
-    __NR_setfsuid,
-    __NR_setfsgid,
-    __NR_setresuid,
-    __NR_setresgid,
-    __NR_openat,
-    __NR3264_fstatat,
-    __NR_faccessat,
-    __NR_faccessat2,
-    __NR_openat2,
-    __NR_uname,
-    __NR_supercall,
-};
-
-static const int compat_skip_syscalls[] = {
-    11, 24, 47, 49, 50,
-    122, 138, 139,
-    164, 170,
-    322, 327, 334,
-    387,
-    437, 439,
-};
-
-static const int target_native_syscalls[] = {
-    __NR_getpriority
-};
-
-static const int target_compat_syscalls[] = {
-    96
-};
-
-static inline bool syscall_is_skipped(int nr, const int *list, size_t count)
+static void getpriority_before(hook_fargs2_t *args, void *udata)
 {
-    for (size_t i = 0; i < count; i++) {
-        if (nr == list[i])
-            return true;
-    }
-    return false;
-}
-
-static void hook_native_syscalls(const int *syscalls, size_t count)
-{
-    logki("hook_native_syscalls start\n");
-
-    if (syscalls) {
-        for (size_t i = 0; i < count; i++) {
-            int nr = syscalls[i];
-            hook_syscalln(nr, 0, before, 0, 0);
-            logkfd("hooked native syscall %d\n", nr);
-        }
-    } else {
-        for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
-            if (!syscall_is_skipped(nr, native_skip_syscalls, ARRAY_SIZE(native_skip_syscalls))) {
-                hook_syscalln(nr, 0, before, 0, 0);
-                logkfd("hooked native syscall %d\n", nr);
-            }
-        }
-    }
-
-    logki("hook_native_syscalls done\n");
-}
-
-static void unhook_native_syscalls(const int *syscalls, size_t count)
-{
-    logki("unhook_native_syscalls start\n");
-
-    if (syscalls) {
-        for (size_t i = 0; i < count; i++) {
-            int nr = syscalls[i];
-            unhook_syscalln(nr, before, 0);
-            logkfd("unhooked native syscall %d\n", nr);
-        }
-    } else {
-        for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
-            if (!syscall_is_skipped(nr, native_skip_syscalls, ARRAY_SIZE(native_skip_syscalls))) {
-                unhook_syscalln(nr, before, 0);
-                logkfd("unhooked native syscall %d\n", nr);
-            }
-        }
-    }
-
-    logki("unhook_native_syscalls done\n");
-}
-
-/* ---------------- Compat ---------------- */
-static void hook_compat_syscalls(const int *syscalls, size_t count)
-{
-    if (!has_config_compat || !compat_sys_call_table)
+    if (current_uid() != 0u) // only allow root 
         return;
-
-    logki("hook_compat_syscalls start\n");
-
-    if (syscalls) {
-        for (size_t i = 0; i < count; i++) {
-            int nr = syscalls[i];
-            hook_compat_syscalln(nr, 0, before, 0, 0);
-            logkfd("hooked compat syscall %d\n", nr);
-        }
-    } else {
-        for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
-            if (!syscall_is_skipped(nr, compat_skip_syscalls, ARRAY_SIZE(compat_skip_syscalls))) {
-                hook_compat_syscalln(nr, 0, before, 0, 0);
-                logkfd("hooked compat syscall %d\n", nr);
-            }
-        }
-    }
-
-    logki("hook_compat_syscalls done\n");
 }
 
-static void unhook_compat_syscalls(const int *syscalls, size_t count)
+static inline bool syscall_is_valid(int nr)
 {
-    if (!has_config_compat || !compat_sys_call_table)
+    void **table;
+    
+    table = (void **)sys_call_table;
+    if (!table || table[nr] == NULL)
+        return false;
+    
+    return true;
+}
+
+static void hook_getpriority_syscall(void)
+{   
+    logki("hook_getpriority_syscall start\n");
+
+    if (!syscall_is_valid(getpriority_nr)) {
+        logkfd("skipping invalid native syscall %d\n", getpriority_nr);
         return;
+    }
+    
+    hook_syscalln(getpriority_nr, getpriority_nr_arg, getpriority_before, 0, 0);
+    logkfd("hooked native syscall %d\n", getpriority_nr);
+    
+    logki("hook_getpriority_syscall done\n");
+}
 
-    logki("unhook_compat_syscalls start\n");
+static void unhook_getpriority_syscall(void)
+{    
+    logki("unhook_getpriority_syscall start\n");
 
-    if (syscalls) {
-        for (size_t i = 0; i < count; i++) {
-            int nr = syscalls[i];
-            unhook_compat_syscalln(nr, before, 0);
-            logkfd("unhooked compat syscall %d\n", nr);
-        }
-    } else {
-        for (int nr = MIN_SYSCALL_NR; nr <= MAX_SYSCALL_NR; nr++) {
-            if (!syscall_is_skipped(nr, compat_skip_syscalls, ARRAY_SIZE(compat_skip_syscalls))) {
-                unhook_compat_syscalln(nr, before, 0);
-                logkfd("unhooked compat syscall %d\n", nr);
-            }
-        }
+    if (!syscall_is_valid(getpriority_nr)) {
+        logkfd("skipping invalid native syscall %d\n", getpriority_nr);
+        return;
     }
 
-    logki("unhook_compat_syscalls done\n");
+    unhook_syscalln(getpriority_nr, getpriority_before, 0);
+    logkfd("unhooked native syscall %d\n", getpriority_nr);
+
+    logki("unhook_getpriority_syscall done\n");
 }
 
 /* ---------------- Init / Exit ---------------- */
-int minimal_hook_init(void)
+int rehook_init(void)
 {
-    logki("minimal_hook_init start\n");
+    logki("rehook_init start\n");
 
-    hook_native_syscalls(NULL, 0);
-    hook_compat_syscalls(NULL, 0);
+    hook_getpriority_syscall();
 
-    logki("minimal_hook_init complete\n");
+    rehook_enabled = 1;
+
+    logki("rehook_init complete\n");
     return 0;
 }
-KP_EXPORT_SYMBOL(minimal_hook_init);
+KP_EXPORT_SYMBOL(rehook_init);
 
-int minimal_hook_exit(void)
+int rehook_exit(void)
 {
-    logki("minimal_hook_exit start\n");
+    logki("rehook_exit start\n");
 
-    unhook_native_syscalls(NULL, 0);
-    unhook_compat_syscalls(NULL, 0);
+    unhook_getpriority_syscall();
 
-    logki("minimal_hook_exit complete\n");
+    rehook_enabled = 0;
+
+    logki("rehook_exit complete\n");
     return 0;
 }
-KP_EXPORT_SYMBOL(minimal_hook_exit);
+KP_EXPORT_SYMBOL(rehook_exit);
 
-int target_hook_init(void)
+int rehook_status(void)
 {
-    logki("target_hook_init start\n");
-
-    hook_native_syscalls(target_native_syscalls, ARRAY_SIZE(target_native_syscalls));
-    hook_compat_syscalls(target_compat_syscalls, ARRAY_SIZE(target_compat_syscalls));
-
-    logki("target_hook_init complete\n");
-    return 0;
+    return rehook_enabled;
 }
-KP_EXPORT_SYMBOL(target_hook_init);
-
-int target_hook_exit(void)
-{
-    logki("target_hook_exit start\n");
-
-    unhook_native_syscalls(target_native_syscalls, ARRAY_SIZE(target_native_syscalls));
-    unhook_compat_syscalls(target_compat_syscalls, ARRAY_SIZE(target_compat_syscalls));
-
-    logki("target_hook_exit complete\n");
-    return 0;
-}
-KP_EXPORT_SYMBOL(target_hook_exit);
+KP_EXPORT_SYMBOL(rehook_status);

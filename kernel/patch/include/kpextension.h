@@ -13,6 +13,5 @@ int is_su_allow_uid(uid_t uid);
 
 int get_ap_mod_exclude(uid_t uid);
 int set_ap_mod_exclude(uid_t uid, int exclude);
-int list_ap_mod_exclude(uid_t *uids, int len);
 
 #endif
