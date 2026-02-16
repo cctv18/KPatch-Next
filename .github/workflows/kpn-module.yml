@@ -2,8 +2,8 @@ name: Sync KPatch Artifacts
 
 on:
   schedule:
-    # 每2小时运行一次（自动同步上游CI）
-    - cron: '0 */2 * * *'
+    # 每8小时运行一次（自动同步上游CI）
+    - cron: '0 */8 * * *'
   workflow_dispatch: # 允许手动触发
 
 permissions:
